@@ -23,8 +23,8 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
-import android.support.annotation.Nullable;
-import android.support.v4.content.LocalBroadcastManager;
+import androidx.annotation.Nullable;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.util.Log;
 
 import java.io.IOException;
@@ -46,6 +46,7 @@ public class WifiDirectHandler extends NonStopIntentService implements
     private final IBinder binder = new WifiTesterBinder();
 
     public static final String SERVICE_MAP_KEY = "serviceMapKey";
+    public static final String SERVICE_NAME = "serviceName";
     public static final String TXT_MAP_KEY = "txtMapKey";
     public static final String MESSAGE_KEY = "messageKey";
     private final String PEERS = "peers";
@@ -267,6 +268,7 @@ public class WifiDirectHandler extends NonStopIntentService implements
         wifiP2pManager.clearLocalServices(channel, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
+                Log.i(TAG, "Cleared local services.");
                 // Add the local service
                 wifiP2pManager.addLocalService(channel, wifiP2pServiceInfo, new WifiP2pManager.ActionListener() {
                     @Override
@@ -394,6 +396,7 @@ public class WifiDirectHandler extends NonStopIntentService implements
                 dnsSdServiceMap.put(srcDevice.deviceAddress, new DnsSdService(instanceName, registrationType, srcDevice));
                 Intent intent = new Intent(Action.DNS_SD_SERVICE_AVAILABLE);
                 intent.putExtra(SERVICE_MAP_KEY, srcDevice.deviceAddress);
+                intent.putExtra(SERVICE_NAME, instanceName);
                 localBroadcastManager.sendBroadcast(intent);
             }
         };
@@ -410,6 +413,8 @@ public class WifiDirectHandler extends NonStopIntentService implements
             @Override
             public void onSuccess() {
                 Log.i(TAG, "Service discovery request added");
+
+                discoverServices();
             }
 
             @Override
@@ -479,8 +484,6 @@ public class WifiDirectHandler extends NonStopIntentService implements
             isDiscovering = true;
             // List to track discovery tasks in progress
             serviceDiscoveryTasks = new ArrayList<>();
-            // Make discover call and first discover task submission
-            discoverServices();
             submitServiceDiscoveryTask();
         }
     }
