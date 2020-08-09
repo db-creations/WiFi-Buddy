@@ -488,6 +488,25 @@ public class WifiDirectHandler extends NonStopIntentService implements
         }
     }
 
+    public void cancelConnect() {
+        Log.i(TAG, "Calling cancel connect.");
+        if (channel != null)
+        {
+            wifiP2pManager.cancelConnect(channel, new WifiP2pManager.ActionListener() {
+                @Override
+                public void onSuccess() {
+                    Log.i(TAG, "Connection cancelled.");
+                }
+
+                @Override
+                public void onFailure(int reason) {
+                    Log.e(TAG, "Failed to cancel connection.");
+                }
+            }
+            );
+        }
+    }
+
     public void stopServiceDiscovery() {
         Log.i(TAG, "Stopping service discovery");
         if (isDiscovering) {
@@ -622,6 +641,8 @@ public class WifiDirectHandler extends NonStopIntentService implements
             @Override
             public void onFailure(int reason) {
                 Log.e(TAG, "Failure initiating connection to service: " + FailureReason.fromInteger(reason).toString());
+				Intent disconnected = new Intent(Action.COMMUNICATION_DISCONNECTED);
+				localBroadcastManager.sendBroadcast(disconnected);
             }
         });
     }
@@ -717,12 +738,18 @@ public class WifiDirectHandler extends NonStopIntentService implements
         } else if (wifiState == WifiManager.WIFI_STATE_DISABLED) {
             // Remove local service, unregister app with Wi-Fi P2P framework, unregister P2pReceiver
             Log.i(TAG, "Wi-Fi disabled");
+			try {
             clearServiceDiscoveryRequests();
             if (wifiP2pServiceInfo != null) {
                 removeService();
             }
             unregisterP2pReceiver();
             unregisterP2p();
+			}
+			catch (Exception ex)
+			{
+				Log.e(TAG, ex.toString());
+			}
         }
         localBroadcastManager.sendBroadcast(new Intent(Action.WIFI_STATE_CHANGED));
     }
