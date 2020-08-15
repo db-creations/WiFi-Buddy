@@ -492,6 +492,11 @@ public class WifiDirectHandler extends NonStopIntentService implements
         Log.i(TAG, "Calling cancel connect.");
         if (channel != null)
         {
+            if (wifiP2pGroup != null)
+            {
+                removeGroup();
+            }
+
             wifiP2pManager.cancelConnect(channel, new WifiP2pManager.ActionListener() {
                 @Override
                 public void onSuccess() {
