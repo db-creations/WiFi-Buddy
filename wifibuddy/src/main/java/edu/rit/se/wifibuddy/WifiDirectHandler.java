@@ -845,6 +845,10 @@ public class WifiDirectHandler extends NonStopIntentService implements
             Log.i(TAG, "Connected to P2P network. Requesting connection info");
             wifiP2pManager.requestConnectionInfo(channel, WifiDirectHandler.this);
         }
+        else {
+            Intent disconnected = new Intent(Action.COMMUNICATION_DISCONNECTED);
+            localBroadcastManager.sendBroadcast(disconnected);
+        }
 
         // Requests peer-to-peer group information
         wifiP2pManager.requestGroupInfo(channel, new WifiP2pManager.GroupInfoListener() {
