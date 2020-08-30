@@ -145,14 +145,21 @@ public class WifiDirectHandler extends NonStopIntentService implements
         wifiP2pManager.clearLocalServices(channel, null);
         wifiP2pManager.clearServiceRequests(channel, null);
         wifiP2pManager.stopPeerDiscovery(channel, null);
+
+        final boolean wasDiscovering = isDiscovering;
+        isDiscovering = false;
+        serviceDiscoveryRegistered = false;
+
         channel = wifiP2pManager.initialize(this, getMainLooper(), null);
         Log.i(TAG, "Reinitialized Channel.");
         // Restart the local service and peer discovery
         wifiP2pManager.addLocalService(channel, wifiP2pServiceInfo, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
-                Log.i(TAG, "Local service added");
-                continuouslyDiscoverServices();
+                if (wasDiscovering) {
+                    Log.i(TAG, "Local service added");
+                    continuouslyDiscoverServices();
+                }
             }
 
             @Override
@@ -848,6 +855,8 @@ public class WifiDirectHandler extends NonStopIntentService implements
         else {
             Intent disconnected = new Intent(Action.COMMUNICATION_DISCONNECTED);
             localBroadcastManager.sendBroadcast(disconnected);
+            restartChannel();
+            return;
         }
 
         // Requests peer-to-peer group information
@@ -862,7 +871,6 @@ public class WifiDirectHandler extends NonStopIntentService implements
                 }
             }
         });
-
     }
 
     /**
