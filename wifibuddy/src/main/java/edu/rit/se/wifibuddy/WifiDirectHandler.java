@@ -140,6 +140,29 @@ public class WifiDirectHandler extends NonStopIntentService implements
         Log.i(TAG, "Registered with Wi-Fi P2P framework");
     }
 
+    private void restartChannel() {
+        Log.i(TAG, "Reinitializing Channel.");
+        wifiP2pManager.clearLocalServices(channel, null);
+        wifiP2pManager.clearServiceRequests(channel, null);
+        wifiP2pManager.stopPeerDiscovery(channel, null);
+        channel = wifiP2pManager.initialize(this, getMainLooper(), null);
+        Log.i(TAG, "Reinitialized Channel.");
+        // Restart the local service and peer discovery
+        wifiP2pManager.addLocalService(channel, wifiP2pServiceInfo, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                Log.i(TAG, "Local service added");
+                continuouslyDiscoverServices();
+            }
+
+            @Override
+            public void onFailure(int reason) {
+                Log.e(TAG, "Failure adding local service: " + FailureReason.fromInteger(reason).toString());
+                wifiP2pServiceInfo = null;
+            }
+        });
+    }
+
     /**
      * Unregisters the application with the Wi-Fi P2P framework
      */
@@ -645,8 +668,12 @@ public class WifiDirectHandler extends NonStopIntentService implements
 
             @Override
             public void onFailure(int reason) {
-                Log.e(TAG, "Failure initiating connection to service: " + FailureReason.fromInteger(reason).toString());
-				Intent disconnected = new Intent(Action.COMMUNICATION_DISCONNECTED);
+                FailureReason failReason = FailureReason.fromInteger(reason);
+                Log.e(TAG, "Failure initiating connection to service: " + failReason.toString());
+
+                restartChannel();
+
+                Intent disconnected = new Intent(Action.COMMUNICATION_DISCONNECTED);
 				localBroadcastManager.sendBroadcast(disconnected);
             }
         });
@@ -817,9 +844,6 @@ public class WifiDirectHandler extends NonStopIntentService implements
         if(networkInfo.isConnected()) {
             Log.i(TAG, "Connected to P2P network. Requesting connection info");
             wifiP2pManager.requestConnectionInfo(channel, WifiDirectHandler.this);
-        } else {
-            Intent disconnected = new Intent(Action.COMMUNICATION_DISCONNECTED);
-            localBroadcastManager.sendBroadcast(disconnected);
         }
 
         // Requests peer-to-peer group information
@@ -896,7 +920,6 @@ public class WifiDirectHandler extends NonStopIntentService implements
                 byte[] readBuf = (byte[]) msg.obj;
                 // construct a string from the valid bytes in the buffer
                 String receivedMessage = new String(readBuf, 0, msg.arg1);
-                Log.i(TAG, "Received message: " + receivedMessage);
                 Intent messageReceivedIntent = new Intent(Action.MESSAGE_RECEIVED);
                 messageReceivedIntent.putExtra(MESSAGE_KEY, readBuf);
                 localBroadcastManager.sendBroadcast(messageReceivedIntent);
@@ -908,7 +931,6 @@ public class WifiDirectHandler extends NonStopIntentService implements
                 break;
             case COMMUNICATION_DISCONNECTED:
                 Log.i(TAG, "Handling communication disconnect");
-                localBroadcastManager.sendBroadcast(new Intent(Action.COMMUNICATION_DISCONNECTED));
                 break;
         }
         return true;
