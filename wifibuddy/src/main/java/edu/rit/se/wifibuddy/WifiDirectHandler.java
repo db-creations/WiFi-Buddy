@@ -853,9 +853,12 @@ public class WifiDirectHandler extends NonStopIntentService implements
             wifiP2pManager.requestConnectionInfo(channel, WifiDirectHandler.this);
         }
         else {
-            Intent disconnected = new Intent(Action.COMMUNICATION_DISCONNECTED);
-            localBroadcastManager.sendBroadcast(disconnected);
-            restartChannel();
+            // Only restart the channel if we have actually started our local service.
+            if (wifiP2pServiceInfo != null) {
+                Intent disconnected = new Intent(Action.COMMUNICATION_DISCONNECTED);
+                localBroadcastManager.sendBroadcast(disconnected);
+                restartChannel();
+            }
             return;
         }
 
