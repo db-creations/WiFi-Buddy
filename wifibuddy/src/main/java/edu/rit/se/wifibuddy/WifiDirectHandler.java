@@ -294,6 +294,11 @@ public class WifiDirectHandler extends NonStopIntentService implements
                 serviceRecord
         );
 
+        if (wifiP2pManager == null) {
+            Log.e(TAG, "wifiP2PManager has  not yet been started.");
+            return;
+        }
+
         // Only add a local service if clearLocalServices succeeds
         wifiP2pManager.clearLocalServices(channel, new WifiP2pManager.ActionListener() {
             @Override
@@ -437,6 +442,10 @@ public class WifiDirectHandler extends NonStopIntentService implements
 
     private void addServiceDiscoveryRequest() {
         serviceRequest = WifiP2pDnsSdServiceRequest.newInstance();
+
+        if (wifiP2pManager == null) {
+            Log.e(TAG, "WifiP2PManager has not yet been initialized, skipping service discovery request.");
+        }
 
         // Tell the framework we want to scan for services. Prerequisite for discovering services
         wifiP2pManager.addServiceRequest(channel, serviceRequest, new WifiP2pManager.ActionListener() {
@@ -591,7 +600,9 @@ public class WifiDirectHandler extends NonStopIntentService implements
                 submitServiceDiscoveryTask();
             }
             // Remove this task from the list since it's complete
-            serviceDiscoveryTasks.remove(this);
+			if (serviceDiscoveryTasks != null) {
+				serviceDiscoveryTasks.remove(this);
+			}
         }
     }
 
@@ -659,6 +670,14 @@ public class WifiDirectHandler extends NonStopIntentService implements
      * @param service The service to connect to
      */
     public void initiateConnectToService(DnsSdService service) {
+        if (service == null) {
+            Log.e(TAG, "Got null service during lookup, peer list is invalid, restarting channel.");
+            restartChannel();
+
+            Intent disconnected = new Intent(Action.COMMUNICATION_DISCONNECTED);
+            localBroadcastManager.sendBroadcast(disconnected);
+        }
+
         // Device info of peer to connect to
         WifiP2pConfig wifiP2pConfig = new WifiP2pConfig();
         wifiP2pConfig.deviceAddress = service.getSrcDevice().deviceAddress;
